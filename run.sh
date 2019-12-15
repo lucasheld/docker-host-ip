@@ -16,7 +16,9 @@ create_routing_table_enty() {
     for ((i=1; i<=2**31; i++))
     do
         grep -q "^${i} " /etc/iproute2/rt_tables
-        if [ "${?}" -ne 0 ]
+        TABLE_NAME="${?}"  # 0 if number found in table
+        TABLE_RULES=$(sudo ip route list tab "${i}" | wc -l)  # 0 if no roules found for table
+        if [ "${TABLE_NAME}" -ne 0 ] && [ "${TABLE_RULES}" -eq 0 ]
         then
             echo "${i} ${BRIDGE_NAME}" | sudo tee -a /etc/iproute2/rt_tables > /dev/null
             echo "created new routing table entry"
