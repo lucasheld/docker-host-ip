@@ -77,6 +77,9 @@ echo "BRIDGE_NAME: ${BRIDGE_NAME}"
 echo "INTERFACE_NAME: ${INTERFACE_NAME}"
 echo "INTERFACE_DNS: ${INTERFACE_DNS}"
 
+# request sudo access to prevent password request between actions
+sudo bash -c "exit 0"
+
 # create docker bridge
 docker network create \
     --attachable \
