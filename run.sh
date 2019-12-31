@@ -1,8 +1,4 @@
 #!/bin/bash
-BRIDGE_NAME="br-rc-up"  # name of the new docker bridge, must be shorter than 15
-INTERFACE_NAME="enp0s8"  # name of the interface which will be used for outgoing connections using the new bridge
-INTERFACE_DNS="1.1.1.1"  # interface dns server
-
 
 create_routing_table_enty() {
     # check if table already contains bridge
@@ -29,12 +25,65 @@ create_routing_table_enty() {
     exit 1
 }
 
+# request bidge name
+echo "[+] Enter your settings:"
+while true
+do
+    read -p "New docker bridge name: " BRIDGE_NAME
+    # check for empty value
+    if [ ${#BRIDGE_NAME} -eq 0 ]
+    then
+        echo "Bridge name can not be empty"
+        continue
+    fi
+    # check for max value length
+    if [ ${#BRIDGE_NAME} -ge 15 ]
+    then
+        echo "Bridge name can not have more than 14 characters"
+        continue
+    fi
+    # check if bridge already exists
+    docker network ls | tail -n +2 | awk '{print $2}' | grep -q "^${BRIDGE_NAME}\$"
+    if [ "${?}" -eq 0 ]
+    then
+        echo "Bridge name already used"
+        continue
+    fi
+    break
+done
+
+# request interface name
+while true
+do
+    read -p "Interface for outgoing connections: " INTERFACE_NAME
+    # check if interface exists
+    ip -4 addr show "${INTERFACE_NAME}" &> /dev/null
+    if [ "${?}" -ne 0 ]
+    then
+        echo "Interface does not exists"
+        continue
+    fi
+    break
+done
+
+# request interface dns
+DEFAULT_INTERFACE_DNS="1.1.1.1"
+read -p "Interface DNS Server [${DEFAULT_INTERFACE_DNS}]: " INTERFACE_DNS
+INTERFACE_DNS="${INTERFACE_DNS:-${DEFAULT_INTERFACE_DNS}}"
+
+# print settings
+echo "[+] Using the following settings:"
+echo "BRIDGE_NAME: ${BRIDGE_NAME}"
+echo "INTERFACE_NAME: ${INTERFACE_NAME}"
+echo "INTERFACE_DNS: ${INTERFACE_DNS}"
+
 # create docker bridge
 docker network create \
     --attachable \
     --opt "com.docker.network.bridge.enable_ip_masquerade=false" \
     --opt "com.docker.network.bridge.name=${BRIDGE_NAME}" \
-    "${BRIDGE_NAME}"
+    "${BRIDGE_NAME}" \
+    > /dev/null
 BRIDGE_SUBNET=$(docker network inspect "${BRIDGE_NAME}" | grep -oP '(?<="Subnet": ")\d+.\d+.\d+.\d+\/\d+(?=")')
 echo "created new docker bridge \"${BRIDGE_NAME}\" with subnet \"${BRIDGE_SUBNET}\""
 
