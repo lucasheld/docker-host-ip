@@ -5,7 +5,7 @@ create_routing_table_enty() {
     grep -q " ${BRIDGE_NAME}$" /etc/iproute2/rt_tables
     if [ "${?}" -eq 0 ]
     then
-        echo "reusing existing routing table entry"
+        echo "Reusing existing routing table entry"
         return
     fi
     # find unused table number
@@ -17,16 +17,15 @@ create_routing_table_enty() {
         if [ "${TABLE_NAME}" -ne 0 ] && [ "${TABLE_RULES}" -eq 0 ]
         then
             echo "${i} ${BRIDGE_NAME}" | sudo tee -a /etc/iproute2/rt_tables > /dev/null
-            echo "created new routing table entry"
+            echo "Created new routing table entry"
             return
         fi
     done
-    echo "there is no free table number"
+    echo "There is no free table number"
     exit 1
 }
 
 # request bidge name
-echo "[+] Enter your settings:"
 while true
 do
     read -p "New docker bridge name: " BRIDGE_NAME
@@ -72,10 +71,9 @@ read -p "Interface DNS Server [${DEFAULT_INTERFACE_DNS}]: " INTERFACE_DNS
 INTERFACE_DNS="${INTERFACE_DNS:-${DEFAULT_INTERFACE_DNS}}"
 
 # print settings
-echo "[+] Using the following settings:"
-echo "BRIDGE_NAME: ${BRIDGE_NAME}"
-echo "INTERFACE_NAME: ${INTERFACE_NAME}"
-echo "INTERFACE_DNS: ${INTERFACE_DNS}"
+# echo "BRIDGE_NAME: ${BRIDGE_NAME}"
+# echo "INTERFACE_NAME: ${INTERFACE_NAME}"
+# echo "INTERFACE_DNS: ${INTERFACE_DNS}"
 
 # request sudo access to prevent password request between actions
 sudo bash -c "exit 0"
@@ -88,7 +86,7 @@ docker network create \
     "${BRIDGE_NAME}" \
     > /dev/null
 BRIDGE_SUBNET=$(docker network inspect "${BRIDGE_NAME}" | grep -oP '(?<="Subnet": ")\d+.\d+.\d+.\d+\/\d+(?=")')
-echo "created new docker bridge \"${BRIDGE_NAME}\" with subnet \"${BRIDGE_SUBNET}\""
+echo "Created new docker bridge \"${BRIDGE_NAME}\" with subnet \"${BRIDGE_SUBNET}\""
 
 # create routes and rules
 create_routing_table_enty
@@ -99,10 +97,10 @@ sudo ip route add default via "${INTERFACE_GATEWAY}" dev "${INTERFACE_NAME}" tab
 sudo ip rule add from "${BRIDGE_SUBNET}" tab "${BRIDGE_NAME}"
 sudo ip route flush cache
 sudo iptables  -t nat -A POSTROUTING -s "${BRIDGE_SUBNET}" ! -o "${BRIDGE_NAME}" -j SNAT --to-source "${INTERFACE_IP}"
-echo "created routes from bridge \"${BRIDGE_NAME}\" to interface \"${INTERFACE_NAME}\""
+echo "Created routes from bridge \"${BRIDGE_NAME}\" to interface \"${INTERFACE_NAME}\""
 
 # check ip address with and without new docker bridge
 IP=$(docker run --rm byrnedo/alpine-curl -sS https://checkip.amazonaws.com)
-echo "IP address used by default docker bridge: ${IP}"
+echo "IP address used by docker bridge \"docker0\": ${IP}"
 IP=$(docker run --rm --network "${BRIDGE_NAME}" --dns="${INTERFACE_DNS}" byrnedo/alpine-curl -sS https://checkip.amazonaws.com)
 echo "IP address used by docker bridge \"${BRIDGE_NAME}\": ${IP}"
