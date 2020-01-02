@@ -2,6 +2,22 @@
 
 This script creates a new docker bridge that uses a specified network interface for outgoging connections.
 
+## Usage
+
+### create bridge
+
+```bash
+$ wget https://github.com/lucasheld/docker-host-ip/raw/master/run.sh
+$ chmod +x run.sh
+$ ./run.sh
+```
+
+### use bridge
+
+```bash
+$ docker run --network <bridge_name> --dns=1.1.1.1 [OPTIONS] IMAGE [COMMAND]
+```
+
 ## Example
 
 | Network interface | IP address    |

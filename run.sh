@@ -1,6 +1,6 @@
 #!/bin/bash
 
-create_routing_table_enty() {
+create_routing_table_entry() {
     # check if table already contains bridge
     grep -q " ${BRIDGE_NAME}$" /etc/iproute2/rt_tables
     if [ "${?}" -eq 0 ]
@@ -89,7 +89,7 @@ BRIDGE_SUBNET=$(docker network inspect "${BRIDGE_NAME}" | grep -oP '(?<="Subnet"
 echo "Created new docker bridge \"${BRIDGE_NAME}\" with subnet \"${BRIDGE_SUBNET}\""
 
 # create routes and rules
-create_routing_table_enty
+create_routing_table_entry
 INTERFACE_IP=$(ip -4 addr show "${INTERFACE_NAME}" | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
 INTERFACE_GATEWAY=$(echo "${INTERFACE_IP%.*}.1")
 sudo ip route add "${BRIDGE_SUBNET}" dev "${INTERFACE_NAME}" tab "${BRIDGE_NAME}"
