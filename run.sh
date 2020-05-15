@@ -21,9 +21,19 @@ create_routing_table_entry() {
             return
         fi
     done
-    echo "There is no free table number"
+    echo "Error: There is no free table number"
     exit 1
 }
+
+# check for missing programs
+for PROGRAM in "docker" "ip" "iptables" "iptables-save"
+do
+    if ! sudo which ${PROGRAM} > /dev/null
+    then
+        echo "Error: ${PROGRAM} not found" >&2
+        exit 1
+    fi
+done
 
 # request bidge name
 while true
@@ -88,15 +98,29 @@ docker network create \
 BRIDGE_SUBNET=$(docker network inspect "${BRIDGE_NAME}" | grep -oP '(?<="Subnet": ")\d+.\d+.\d+.\d+\/\d+(?=")')
 echo "Created new docker bridge \"${BRIDGE_NAME}\" with subnet \"${BRIDGE_SUBNET}\""
 
-# create routes and rules
 create_routing_table_entry
 INTERFACE_IP=$(ip -4 a | grep "inet\ .*\ ${INTERFACE_NAME}$" | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
 INTERFACE_GATEWAY=$(echo "${INTERFACE_IP%.*}.1")
+sudo mkdir -p /etc/sysconfig/network-scripts
+
+# create ip routes
 sudo ip route add "${BRIDGE_SUBNET}" dev "${INTERFACE_NAME}" tab "${BRIDGE_NAME}"
+echo "${BRIDGE_SUBNET} dev ${INTERFACE_NAME} tab ${BRIDGE_NAME}" | sudo tee "/etc/sysconfig/network-scripts/route-${BRIDGE_NAME}" > /dev/null
+
 sudo ip route add default via "${INTERFACE_GATEWAY}" dev "${INTERFACE_NAME}" tab "${BRIDGE_NAME}"
-sudo ip rule add from "${BRIDGE_SUBNET}" tab "${BRIDGE_NAME}"
+echo "default via ${INTERFACE_GATEWAY} dev ${INTERFACE_NAME} tab ${BRIDGE_NAME}" | sudo tee -a "/etc/sysconfig/network-scripts/route-${BRIDGE_NAME}" > /dev/null
+
 sudo ip route flush cache
-sudo iptables  -t nat -A POSTROUTING -s "${BRIDGE_SUBNET}" ! -o "${BRIDGE_NAME}" -j SNAT --to-source "${INTERFACE_IP}"
+echo "flush cache" | sudo tee -a "/etc/sysconfig/network-scripts/route-${BRIDGE_NAME}" > /dev/null
+
+# create ip rules
+sudo ip rule add from "${BRIDGE_SUBNET}" tab "${BRIDGE_NAME}"
+echo "from ${BRIDGE_SUBNET} tab ${BRIDGE_NAME}" | sudo tee "/etc/sysconfig/network-scripts/rule-${BRIDGE_NAME}" > /dev/null
+
+# create iptable rules
+sudo iptables -t nat -A POSTROUTING -s "${BRIDGE_SUBNET}" ! -o "${BRIDGE_NAME}" -j SNAT --to-source "${INTERFACE_IP}"
+sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
+
 echo "Created routes from bridge \"${BRIDGE_NAME}\" to interface \"${INTERFACE_NAME}\""
 
 # check ip address with and without new docker bridge
