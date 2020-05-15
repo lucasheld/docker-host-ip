@@ -4,7 +4,7 @@ This script creates a new docker bridge that uses a specified network interface 
 
 ## Usage
 
-### create bridge
+### Create bridge
 
 ```bash
 $ wget https://github.com/lucasheld/docker-host-ip/raw/master/run.sh
@@ -12,7 +12,7 @@ $ chmod +x run.sh
 $ ./run.sh
 ```
 
-### use bridge
+### Use bridge
 
 ```bash
 $ docker run --network <bridge_name> --dns=1.1.1.1 [OPTIONS] IMAGE [COMMAND]
@@ -30,7 +30,7 @@ $ docker run --network <bridge_name> --dns=1.1.1.1 [OPTIONS] IMAGE [COMMAND]
 | docker0       | enp0s3                 |
 | **mybridge**  | **enp0s8**             |
 
-The bold row is available after running:
+The bold row is available after running the script:
 
 ```
 $ ./run.sh
